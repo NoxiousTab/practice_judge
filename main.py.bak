@@ -1,0 +1,127 @@
+import os
+import subprocess
+from flask import Flask, request, jsonify, render_template
+
+app = Flask(__name__)
+
+UPLOAD_FOLDER = './user_submissions'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_files():
+    input_file = request.files['input_file']
+    correct_output_file = request.files['correct_output_file']
+    input_file.save('./input_files/input.txt')
+    correct_output_file.save('./input_files/correct_output.txt')
+    return "Files uploaded successfully!", 200
+
+'''@app.route('/submit', methods=['POST'])
+def submit_code():
+    # Save the submitted code
+    code_file = request.files['code']
+    code_path = os.path.join(UPLOAD_FOLDER, 'submission.cpp')
+    code_file.save(code_path)
+
+    # Paths for compilation and execution
+    executable_path = os.path.join(UPLOAD_FOLDER, 'submission.exe')
+    input_path = './input_files/input.txt'
+    user_output_path = os.path.join(UPLOAD_FOLDER, 'user_output.txt')
+
+    try:
+        # Compile the C++ code
+        compile_result = subprocess.run(['g++', code_path, '-o', executable_path],
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if compile_result.returncode != 0:
+            return jsonify({"verdict": "Compilation Error", "details": compile_result.stderr.decode()}), 400
+
+        # Run the compiled executable with the input file
+        with open(input_path, 'r') as infile, open(user_output_path, 'w') as outfile:
+            run_result = subprocess.run([executable_path], stdin=infile, stdout=outfile, stderr=subprocess.PIPE, timeout=5)
+
+        # Compare user output with correct output
+        with open('./input_files/correct_output.txt', 'r') as correct_output, open(user_output_path, 'r') as user_output:
+            if correct_output.read().strip() == user_output.read().strip():
+                return jsonify({"verdict": "Accepted"}), 200
+            else:
+                return jsonify({"verdict": "Wrong Answer"}), 200
+
+    except subprocess.TimeoutExpired:
+        return jsonify({"verdict": "Time Limit Exceeded"}), 400
+    except Exception as e:
+        return jsonify({"verdict": "Error", "details": str(e)}), 400
+'''
+@app.route('/submit', methods=['POST'])
+def submit_code():
+    # Save the submitted code
+    code_file = request.files['code']
+    language = request.form['language']
+    
+    # Set the file extension based on the selected language
+    if language == 'cpp':
+        code_filename = 'submission.cpp'
+        executable_filename = 'submission.exe'
+    elif language == 'python':
+        code_filename = 'submission.py'
+        executable_filename = None  # No compilation for Python
+    elif language == 'java':
+        code_filename = 'submission.java'
+        executable_filename = 'submission.class'  # Java class file after compilation
+
+    code_path = os.path.join(UPLOAD_FOLDER, code_filename)
+    code_file.save(code_path)
+
+    # Paths for execution
+    executable_path = os.path.join(UPLOAD_FOLDER, executable_filename) if executable_filename else None
+    user_output_path = os.path.join(UPLOAD_FOLDER, 'user_output.txt')
+
+    input_path = './input_files/input.txt'
+
+    try:
+        with open(input_path, 'r') as infile, open(user_output_path, 'w') as outfile:
+            if language == 'cpp':
+                # Compile C++ code
+                compile_result = subprocess.run(['g++', code_path, '-o', executable_path],
+                                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if compile_result.returncode != 0:
+                    return jsonify({"verdict": "Compilation Error", "details": compile_result.stderr.decode()}), 400
+                # Run the compiled executable
+                run_result = subprocess.run([executable_path], stdin=infile, stdout=outfile, stderr=subprocess.PIPE, timeout=5)
+                print(user_output_path)
+            elif language == 'python':
+                # Run Python script
+                run_result = subprocess.run(['python3', code_path], stdin=infile, stdout=outfile, stderr=subprocess.PIPE, timeout=5)
+
+            elif language == 'java':
+                # Compile Java code
+                compile_result = subprocess.run(['javac', code_path],
+                                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if compile_result.returncode != 0:
+                    return jsonify({"verdict": "Compilation Error", "details": compile_result.stderr.decode()}), 400
+                # Run the Java program
+                run_result = subprocess.run(['java', '-cp', UPLOAD_FOLDER, 'submission'], stdin=infile, stdout=outfile, stderr=subprocess.PIPE, timeout=5)
+
+            if run_result.returncode != 0:
+                return jsonify({"verdict": "Runtime Error", "details": run_result.stderr.decode()}), 400
+
+            # Compare user output with correct output
+            with open('./input_files/correct_output.txt', 'r') as correct_output, open(user_output_path, 'r') as user_output:
+                if correct_output.read().strip() == user_output.read().strip():
+                    return jsonify({"verdict": "Accepted"}), 200
+                else:
+                    return jsonify({"verdict": "Wrong Answer"}), 200
+
+    except subprocess.TimeoutExpired:
+        return jsonify({"verdict": "Time Limit Exceeded"}), 400
+    except Exception as e:
+        print(e)
+        return jsonify({"verdict": "Error", "details": str(e)}), 400
+
+
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
