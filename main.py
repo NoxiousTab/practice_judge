@@ -3,7 +3,6 @@ import subprocess
 from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
-app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 UPLOAD_FOLDER = './user_submissions'
 INPUT_FOLDER = './input_files'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -93,4 +92,4 @@ def submit_code():
     return jsonify({"verdict": "Accepted"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
