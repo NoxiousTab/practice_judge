@@ -1,0 +1,32 @@
+app = "online-judge-app" # Replace with your desired app name
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[env]
+  PORT = "8080"
+
+[build]
+  image = "python:3.9-slim"
+
+[experimental]
+  auto_rollback = true
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80  # Expose port 80 for HTTP traffic
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443  # Expose port 443 for HTTPS traffic
+
+  [[services.tcp_checks]]
+    grace_period = "5s"  # Allow 5 seconds for the app to start
+    interval = "15s"     # Check every 15 seconds
+    timeout = "2s"
+    restart_limit = 0
