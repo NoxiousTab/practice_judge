@@ -4,4 +4,3 @@ Flask-SQLAlchemy
 Flask-Login
 Werkzeug
 flask_migrate
-waitress
