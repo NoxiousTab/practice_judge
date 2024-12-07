@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Judge - Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(120deg, #e0f7fa, #f1f8e9);
+            color: #333;
+        }
+        .header {
+            padding: 30px;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .profile-link {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: bold;
+            background: #007bff;
+            padding: 5px 15px;
+            border-radius: 20px;
+            transition: background 0.3s;
+        }
+        .profile-link:hover {
+            background: #0056b3;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            font-weight: bold;
+            text-align: center;
+        }
+        .btn {
+            border-radius: 20px;
+            transition: all 0.3s ease-in-out;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .submission-history {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .submission-item {
+            border-bottom: 1px solid #ddd;
+            padding: 10px;
+        }
+        .submission-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1>Welcome to Your Dashboard, {{ username }}!</h1>
+            <p class="lead">Manage your submissions and track your progress!</p>
+        </div>
+
+        <!-- Profile Link -->
+        <div style="position: absolute; top: 20px; right: 20px;">
+            <a href="{{ url_for('submissions.profile') }}" class="profile-link">Profile</a>
+            <a href="{{ url_for('auth.logout') }}" class="profile-link" style="margin-left: 10px; background: #dc3545;">Logout</a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Submission History Section -->
+            <div class="col-md-4">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">Your Submission History</div>
+                    <div class="card-body submission-history">
+                        {% if submissions %}
+                            {% for submission in submissions %}
+                                <div class="submission-item">
+                                    <h5>{{ submission.title }}</h5>
+                                    <p>Language: {{ submission.language }}</p>
+                                    <p>Verdict: {{ submission.verdict }}</p>
+                                    <p>Test Cases: {{ submission.test_cases }}</p>
+                                    <small>Submitted on: {{ submission.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>No submissions yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Upload Section -->
+            <div class="col-md-4">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">Upload Input and Output Files</div>
+                    <div class="card-body">
+                        <form id="fileUploadForm" enctype="multipart/form-data">
+                            <div class="mb-4">
+                                <label for="inputFiles" class="form-label">Input Files</label>
+                                <input type="file" name="input_files" id="inputFiles" class="form-control" multiple required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="outputFiles" class="form-label">Correct Output Files</label>
+                                <input type="file" name="output_files" id="outputFiles" class="form-control" multiple required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Upload Files</button>
+                        </form>
+                        <div id="uploadFeedback" class="alert d-none mt-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Submission Section -->
+            <div class="col-md-4">
+                <div class="card shadow">
+                    <div class="card-header bg-warning text-dark">Submit Your Code</div>
+                    <div class="card-body">
+                        <form id="codeSubmitForm" enctype="multipart/form-data">
+                            <div class="mb-4">
+                                <label for="codeFile" class="form-label">Code File</label>
+                                <input type="file" name="code" id="codeFile" class="form-control" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="language" class="form-label">Programming Language</label>
+                                <select name="language" id="language" class="form-select">
+                                    <option value="cpp">C++</option>
+                                    <option value="python">Python</option>
+                                    <option value="java">Java</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100">Submit Code</button>
+                        </form>
+
+                        <!-- Spinner -->
+                        <div id="spinner" class="text-center mt-3 d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+
+                        <!-- Verdict Display -->
+                        <div id="verdict" class="alert mt-4 d-none"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- JavaScript for Feedback and Spinner -->
+    <script>
+        const codeSubmitForm = document.getElementById('codeSubmitForm');
+        const verdictDiv = document.getElementById('verdict');
+        const spinner = document.getElementById('spinner');
+
+        codeSubmitForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent form from submitting traditionally
+            spinner.classList.remove('d-none'); // Show spinner
+
+            // Create a FormData object
+            const formData = new FormData(codeSubmitForm);
+
+            // Send AJAX request
+            fetch('/submit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                spinner.classList.add('d-none'); // Hide spinner
+                verdictDiv.classList.remove('d-none', 'alert-danger', 'alert-success');
+                
+                if (data.verdict === 'Accepted') {
+                    verdictDiv.classList.add('alert-success');
+                } else {
+                    verdictDiv.classList.add('alert-danger');
+                }
+                verdictDiv.textContent = `Verdict: ${data.verdict}`;
+            })
+            .catch(error => {
+                spinner.classList.add('d-none'); // Hide spinner
+                verdictDiv.classList.remove('d-none', 'alert-success');
+                verdictDiv.classList.add('alert-danger');
+                verdictDiv.textContent = 'Error occurred. Please try again.';
+            });
+        });
+    </script>
+
+    <script>
+        const fileUploadForm = document.getElementById('fileUploadForm');
+        const uploadFeedback = document.getElementById('uploadFeedback');
+
+        fileUploadForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent the form from submitting traditionally
+
+            // Create a FormData object
+            const formData = new FormData(fileUploadForm);
+
+            // Send an asynchronous POST request
+            fetch('/upload', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text(); // Expect plain text response
+                } else {
+                    throw new Error('Upload failed');
+                }
+            })
+            .then(message => {
+                // Show success feedback
+                uploadFeedback.textContent = message;
+                uploadFeedback.className = 'alert alert-success mt-3';
+                uploadFeedback.classList.remove('d-none');
+            })
+            .catch(error => {
+                // Show error feedback
+                uploadFeedback.textContent = 'Error: ' + error.message;
+                uploadFeedback.className = 'alert alert-danger mt-3';
+                uploadFeedback.classList.remove('d-none');
+            });
+        });
+    </script>
+</body>
+</html>

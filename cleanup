@@ -1,0 +1,2 @@
+rm -rvf input_files
+rm -rvf user_submissions
