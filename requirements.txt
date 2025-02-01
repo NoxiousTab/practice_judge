@@ -5,3 +5,4 @@ Flask-Login
 Werkzeug
 flask_migrate
 waitress
+gunicorn==19.7.1
