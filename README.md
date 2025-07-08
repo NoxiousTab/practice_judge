@@ -59,15 +59,6 @@ This project simulates the **core logic of competitive programming platforms** l
 
 ---
 
-## ✅ Future Enhancements
-
-- 🧍 User login/leaderboard
-- 🌐 Docker sandboxing for secure execution
-- 📊 Code statistics and performance analysis
-- 🖼️ WebSocket-based real-time result update
-
----
-
 ## 👨‍💻 Author
 
 **Tabish Ahmed**  
